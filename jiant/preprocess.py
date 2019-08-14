@@ -574,7 +574,7 @@ def add_bert_wpm_vocab(vocab, bert_model_name):
     for word in ordered_vocab:
         vocab.add_token_to_namespace(word, bert_model_name)
 
-def add_owe_vocab(vocab, owe_model_name="owe", corpus_directory, output_directory):
+def add_owe_vocab(vocab, owe_model_name, corpus_directory, output_directory):
     from pathlib import Path
     from owe import data
     from owe.utils import read_config

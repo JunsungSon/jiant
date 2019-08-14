@@ -296,7 +296,10 @@ def process_sentence(tokenizer_name, sent, max_seq_len):
     else:
         sos_tok, eos_tok = SOS_TOK, EOS_TOK
     if isinstance(sent, str):
-        return [sos_tok] + tokenizer.tokenize(sent)[:max_seq_len] + [eos_tok]
+        if tokenizer_name.startswith("OWE"):
+            return tokenizer.tokenize(sent)[:max_seq_len]
+        else:
+            return [sos_tok] + tokenizer.tokenize(sent)[:max_seq_len] + [eos_tok]
     elif isinstance(sent, list):
         assert isinstance(sent[0], str), "Invalid sentence found!"
         return [sos_tok] + sent[:max_seq_len] + [eos_tok]
