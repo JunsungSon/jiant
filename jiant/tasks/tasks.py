@@ -2582,7 +2582,7 @@ class COPATask(MultipleChoiceTask):
         """ Process the dataset located at path.  """
 
         def _load_split(data_file):
-            contexts, questions, choicess, targs = [], [], [], []
+            contexts, questions, choicess, targs, contexts_for_owe, questions_for_owe, choicess_for_owe = [], [], [], [], [], [], []
             data = [json.loads(l) for l in open(data_file, encoding="utf-8")]
             for example in data:
                 context = example["premise"]
@@ -2598,12 +2598,19 @@ class COPATask(MultipleChoiceTask):
                     process_sentence(self._tokenizer_name, choice, self.max_seq_len)
                     for choice in [choice1, choice2]
                 ]
+                choices_for_owe = [
+                    process_sentence("OWE", choice, self.max_seq_len)
+                    for choice in [choice1, choice2]
+                ]
                 targ = example["label"] if "label" in example else 0
                 contexts.append(process_sentence(self._tokenizer_name, context, self.max_seq_len))
+                contexts_for_owe.append(process_sentence("OWE", context, self.max_seq_len))
                 choicess.append(choices)
+                choicess_for_owe.append(choices_for_owe)
                 questions.append(process_sentence(self._tokenizer_name, question, self.max_seq_len))
+                questions_for_owe.append(process_sentence("OWE", question, self.max_seq_len))
                 targs.append(targ)
-            return [contexts, choicess, questions, targs]
+            return [contexts, choicess, questions, targs, contexts_for_owe, choicess_for_owe, questions_for_owe]
 
         self.train_data_text = _load_split(os.path.join(self.path, "train.jsonl"))
         self.val_data_text = _load_split(os.path.join(self.path, "val.jsonl"))

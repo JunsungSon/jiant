@@ -7,6 +7,9 @@ import functools
 import logging as log
 import os
 
+import re
+
+from nltk.tokenize import word_tokenize
 from nltk.tokenize.moses import MosesDetokenizer
 from nltk.tokenize.moses import MosesTokenizer as NLTKMosesTokenizer
 from nltk.tokenize.simple import SpaceTokenizer
@@ -41,6 +44,42 @@ class OpenAIBPETokenizer(Tokenizer):
         ids = self.encode([sentence])[0]
         return self.lookup_ids(ids)
 
+class OWEWordTokenizer(Tokenizer):
+    def __init__(self):
+        super().__init__()
+
+    def tokenize_old(content, lower=True, remove_punctuation=True, add_underscores=False, limit_len=100000):
+        """
+        Splits on spaces between tokens.
+
+        :param content: The string that shall be tokenized.
+        :param lower: Lowers content string
+        :param remove_punctuation: Removes single punctuation tokens
+        :param add_underscores: Replaces spaces with underscores
+        :return:
+        """
+        if not content or not limit_len:
+            return [""] if add_underscores else []
+
+        if not isinstance(content, (str)):
+            raise ValueError("Content must be a string.")
+
+        if remove_punctuation:
+            content = re.sub('[^A-Za-z0-9 ]+', '', content)
+
+        if lower:
+            content = content.lower()
+
+        if add_underscores:
+            res = [re.sub(' ', '_', content)]
+            return res
+
+        res = word_tokenize(content)
+        return res
+
+    def tokenize(self, sentence):
+        return self.tokenize_old(sentence)
+
 
 class MosesTokenizer(Tokenizer):
     def __init__(self):
@@ -68,6 +107,8 @@ def get_tokenizer(tokenizer_name):
 
         do_lower_case = tokenizer_name.endswith("uncased")
         tokenizer = BertTokenizer.from_pretrained(tokenizer_name, do_lower_case=do_lower_case)
+    elif tokenizer_name == "OWE":
+        tokenizer = OWEWordTokenizer()
     elif tokenizer_name == "OpenAI.BPE":
         tokenizer = OpenAIBPETokenizer()
     elif tokenizer_name == "MosesTokenizer":
