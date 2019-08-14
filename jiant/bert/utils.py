@@ -214,7 +214,7 @@ class BertOWEEmbedderModule(nn.Module):
             del checkpoint_owe
 
     def forward(
-        self, sent: Dict[str, torch.LongTensor], unused_task_name: str = "", is_pair_task=False
+        self, sent: Dict[str, torch.LongTensor], owe_sent: Dict[str, torch.LongTensor], unused_task_name: str = "", is_pair_task=False
     ) -> torch.FloatTensor:
         """ Run BERT to get hidden states.
 
