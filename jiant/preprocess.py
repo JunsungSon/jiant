@@ -227,11 +227,14 @@ def _build_vocab(args, tasks, vocab_path: str):
     if args.input_module.startswith("bert"):
         # Add pre-computed BPE vocabulary for BERT model.
         add_bert_wpm_vocab(vocab, args.input_module)
+    if args.use_owe:
+        # Add pre-computed vocabulary for OWE model.
+        owe_vectors = add_owe_vocab(vocab, "owe", args.corpus_directory, args.output_directory)
 
     vocab.save_to_files(vocab_path)
     log.info("\tSaved vocab to %s", vocab_path)
     #  del word2freq, char2freq, target2freq
-
+    return owe_vectors
 
 def build_indexers(args):
     indexers = {}
@@ -263,6 +266,8 @@ def build_indexers(args):
             "specified BERT model."
         )
         indexers["bert_wpm_pretokenized"] = SingleIdTokenIndexer(args.input_module)
+    if args.use_owe:
+        indexers["owe_pretokenized"] = SingleIdTokenIndexer("owe")
     return indexers
 
 
@@ -291,7 +296,7 @@ def build_tasks(args):
 
     vocab_path = os.path.join(args.exp_dir, "vocab")
     if args.reload_vocab or not os.path.exists(vocab_path):
-        _build_vocab(args, tasks, vocab_path)
+        owe_vectors = _build_vocab(args, tasks, vocab_path)
 
     # Always load vocab from file.
     vocab = Vocabulary.from_files(vocab_path)
@@ -314,6 +319,8 @@ def build_tasks(args):
         else:  # load from file
             word_embs = pkl.load(open(emb_file, "rb"))
         log.info("Trimmed word embeddings: %s", str(word_embs.size()))
+    elif args.use_owe:
+        word_embs = owe_vectors
 
     # 4) Index tasks using vocab (if preprocessed copy not available).
     preproc_dir = os.path.join(args.exp_dir, "preproc")
@@ -566,6 +573,48 @@ def add_bert_wpm_vocab(vocab, bert_model_name):
     log.info("BERT WPM vocab (model=%s): %d tokens", bert_model_name, len(ordered_vocab))
     for word in ordered_vocab:
         vocab.add_token_to_namespace(word, bert_model_name)
+
+def add_owe_vocab(vocab, owe_model_name="owe", corpus_directory, output_directory):
+    from pathlib import Path
+    from owe import data
+    from owe.utils import read_config
+    from owe.config import Config
+
+    corpus_directory = Path(corpus_directory)
+
+    # Init experiment directory
+    output_directory = Path(output_directory)
+#    output_directory.mkdir(parents=True, exist_ok=True)
+    #    tensorboard_writer = SummaryWriter(str(output_directory))
+    #    setup_logging(logfile=str(output_directory / 'output.log'))
+
+    # Log git hash for reproducibility
+    #    try:
+    #        logger.info("Git Hash: " + subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode("utf-8"))
+    #    except subprocess.CalledProcessError:
+    #        logger.info("Could not log git commit hash.")
+
+    # Try to load config file
+    config_file = output_directory / "config.ini"
+    if not config_file.exists():
+        raise FileNotFoundError(f"No config file found under: {config_file}.")
+    train_file, valid_file, test_file, skip_header, split_symbol, wiki_file = read_config(config_file)
+
+    # Load dataset
+    dataset = data.load_dataset(train_file=corpus_directory / train_file,
+                                valid_file=corpus_directory / valid_file,
+                                test_file=corpus_directory / test_file,
+                                split_symbol=split_symbol,
+                                header=skip_header,
+                                entitydata_file=corpus_directory / wiki_file)
+
+    word_vectors = data.load_embedding_file(Config.get('PretrainedEmbeddingFile'))
+    embedding_dim = word_vectors.vector_size
+    dataset.vocab.load_vectors(word_vectors)  # Create embedding for known words
+    for (i, t) in dataset.vocab.id2token:
+        vocab.add_token_to_namespace(t, owe_model_name)
+
+    return dataset.vocab.vectors
 
 
 def add_openai_bpe_vocab(vocab, namespace="openai_bpe"):

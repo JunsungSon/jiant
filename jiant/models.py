@@ -227,7 +227,7 @@ def build_model(args, vocab, pretrained_embs, tasks):
     elif args.input_module.startswith("bert"):
         # Note: incompatible with other embedders, but logic in preprocess.py
         # should prevent these from being enabled anyway.
-        from .bert.utils import BertEmbedderModule
+        from .bert.utils import BertEmbedderModule, BertOWEEmbedderModule
 
         log.info(f"Using BERT model ({args.input_module}).")
         cove_layer = None
@@ -238,7 +238,10 @@ def build_model(args, vocab, pretrained_embs, tasks):
             "PYTORCH_PRETRAINED_BERT_CACHE", os.path.join(args.exp_dir, "bert_cache")
         )
         maybe_make_dir(bert_cache_dir)
-        embedder = BertEmbedderModule(args, cache_dir=bert_cache_dir)
+        if args.use_owe:
+            embedder = BertOWEEmbedderModule(args, pretrained_embs, cache_dir=bert_cache_dir)
+        else:
+            embedder = BertEmbedderModule(args, cache_dir=bert_cache_dir)
         d_emb = embedder.get_output_dim()
     else:
         # Default case, used for ELMo, CoVe, word embeddings, etc.
