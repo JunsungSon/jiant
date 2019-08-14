@@ -213,6 +213,7 @@ def _build_vocab(args, tasks, vocab_path: str):
     # and provided via `task.all_labels()`. The namespace should be task-specific,
     # i.e. not something generic like "targets".
     log.info("\tBuilding vocab from scratch.")
+    owe_vectors = None
     max_v_sizes = {"word": args.max_word_v_size, "char": args.max_char_v_size}
     word2freq, char2freq = get_words(tasks)
     vocab = get_vocab(word2freq, char2freq, max_v_sizes)

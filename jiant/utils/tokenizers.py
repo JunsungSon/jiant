@@ -48,7 +48,7 @@ class OWEWordTokenizer(Tokenizer):
     def __init__(self):
         super().__init__()
 
-    def tokenize_old(content, lower=True, remove_punctuation=True, add_underscores=False, limit_len=100000):
+    def tokenize_old(self, content, lower=True, remove_punctuation=True, add_underscores=False, limit_len=100000):
         """
         Splits on spaces between tokens.
 
