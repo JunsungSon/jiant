@@ -2627,21 +2627,27 @@ class COPATask(MultipleChoiceTask):
         """ Process split text into a list of AlleNNLP Instances. """
         is_using_bert = "bert_wpm_pretokenized" in indexers
 
-        def _make_instance(context, choices, question, label, idx):
+        def _make_instance(context, choices, question, label, context_for_owe, choicess_for_owe, question_for_owe, idx):
             d = {}
             d["question_str"] = MetadataField(" ".join(context[1:-1]))
+            d["question_owe_str"] = MetadataField(" ".join(context_for_owe))
             if not is_using_bert:
                 d["question"] = sentence_to_text_field(context, indexers)
             for choice_idx, choice in enumerate(choices):
                 inp = context + question[1:] + choice[1:] if is_using_bert else choice
                 d["choice%d" % choice_idx] = sentence_to_text_field(inp, indexers)
                 d["choice%d_str" % choice_idx] = MetadataField(" ".join(choice[1:-1]))
+            for choice_idx, choice in enumerate(choicess_for_owe):
+                inp = context_for_owe + question_for_owe + choice
+                d["owe_choice%d" % choice_idx] = sentence_to_text_field(inp, indexers)
+                d["owe_choice%d_str" % choice_idx] = MetadataField(" ".join(choice))
             d["label"] = LabelField(label, label_namespace="labels", skip_indexing=True)
             d["idx"] = LabelField(idx, label_namespace="idxs", skip_indexing=True)
             return Instance(d)
 
         split = list(split)
-        if len(split) < 5:
+#        if len(split) < 5:
+        if len(split) < 8:
             split.append(itertools.count())
         instances = map(_make_instance, *split)
         return instances
